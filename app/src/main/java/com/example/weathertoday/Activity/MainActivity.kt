@@ -1,6 +1,8 @@
 package com.example.weathertoday.Activity
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.icu.util.Calendar
 import android.os.Bundle
@@ -11,6 +13,8 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
@@ -25,6 +29,8 @@ import eightbitlab.com.blurview.RenderScriptBlur
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import androidx.appcompat.app.AppCompatDelegate
+
 
 
 class MainActivity : AppCompatActivity() {
@@ -35,9 +41,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         setContentView(binding.root)
 
         weatherViewModel = ViewModelProvider(this)[WeatherViewModel::class.java]
+
 
         window.apply {
             addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
@@ -49,11 +57,18 @@ class MainActivity : AppCompatActivity() {
             var lon = intent.getDoubleExtra("lon", 0.0)
             var name = intent.getStringExtra("name")
 
-            if(lat==0.0){
-                var lat=51.50
-                var lon=-0.12
-                var name="London"
+            if (lat != 0.0 && lon != 0.0 && name != null) {
+                saveLastCity(lat, lon, name)
             }
+
+
+            if (lat == 0.0) {
+                val prefs = getSharedPreferences("weather_prefs", MODE_PRIVATE)
+                lat = prefs.getFloat("lat", 51.50f).toDouble()
+                lon = prefs.getFloat("lon", -0.12f).toDouble()
+                name = prefs.getString("name", "London")
+            }
+
 
             addCityTxt.setOnClickListener {
                 startActivity(Intent(this@MainActivity, CityListActivity::class.java))
@@ -145,8 +160,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveLastCity(lat: Double, lon: Double, name: String) {
+        val sharedPref = getSharedPreferences("weather_prefs", MODE_PRIVATE)
+        with(sharedPref.edit()) {
+            putFloat("lat", lat.toFloat())
+            putFloat("lon", lon.toFloat())
+            putString("name", name)
+            apply()
+        }
+    }
+
     private fun isNightNow(): Boolean{
-        return calendar.get(Calendar.HOUR_OF_DAY) >= 18
+        return calendar.get(Calendar.HOUR_OF_DAY) >= 20 && calendar.get(Calendar.HOUR_OF_DAY) <= 6
     }
     private fun setDynamicallyWallplaper(icon:String):Int{
         return when(icon.dropLast(1)){
